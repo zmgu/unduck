@@ -1,0 +1,119 @@
+version: "3.9"
+
+services:
+
+  # Gateway Service
+  gateway:
+    build:
+      context: ./backend/unduck-gateway-service
+      dockerfile: Dockerfile
+    container_name: unduck-gateway
+    ports:
+      - "${GATEWAY_PORT}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
+      AUTH_SERVICE_URL: http://auth:${AUTH_PORT}
+      PLATFORM_SERVICE_URL: http://platform:${PLATFORM_PORT}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+    depends_on:
+      - auth
+      - platform
+      - redis
+    networks:
+      - unduck-network
+
+
+  # Auth Service
+  auth:
+    build:
+      context: ./backend/unduck-auth-service
+      dockerfile: Dockerfile
+    container_name: unduck-auth
+    ports:
+      - "${AUTH_PORT}:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
+      DB_HOST: auth-mysql
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+    depends_on:
+      - auth-db
+      - redis
+    networks:
+      - unduck-network
+
+
+  # Auth MySQL
+  auth-mysql:
+    image: mysql:8.0
+    container_name: unduck-auth-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - auth-db-data:/var/lib/mysql
+    networks:
+      - unduck-network
+
+
+  # Platform Service
+  platform:
+    build:
+      context: ./backend/unduck-platform-service
+      dockerfile: Dockerfile
+    container_name: unduck-platform
+    ports:
+      - "${PLATFORM_PORT}:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+    depends_on:
+      - redis
+    networks:
+      - unduck-network
+
+
+  # Redis
+  redis:
+    image: redis:7.2
+    container_name: unduck-redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - unduck-network
+
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend/unduck-frontend-app
+      dockerfile: Dockerfile
+    container_name: unduck-frontend
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    environment:
+      - REACT_APP_GATEWAY_URL=${REACT_APP_GATEWAY_URL}
+    depends_on:
+      - gateway
+    networks:
+      - unduck-network
+
+
+# 네트워크 & 볼륨 정의
+networks:
+  unduck-network:
+    driver: bridge
+
+volumes:
+  auth-db-data:
+  redis-data:
