@@ -4,7 +4,13 @@ spring:
 
   cloud:
     config:
-      enabled: false
+      uri: http://unduck-config:8888
+      fail-fast: true
+      retry:
+        max-attempts: 5
+        initial-interval: 2000
+      profile: prod
+      label: main
 
 eureka:
   client:
