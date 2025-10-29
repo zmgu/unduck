@@ -1,0 +1,27 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: unduck-config-server
+
+  profiles:
+    active: git
+
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/zmgu/unduck-config.git   # 🔹 GitHub Config Repo URL
+          username: ${GIT_USERNAME}
+          password: ${GIT_TOKEN}
+          default-label: main
+          clone-on-start: true
+          search-paths: config
+          force-pull: true   # ✅ 로컬 캐시가 있을 경우 항상 최신으로 갱신
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
