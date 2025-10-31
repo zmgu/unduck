@@ -2,15 +2,17 @@ spring:
   application:
     name: unduck-gateway-service
 
+  config:
+    import: optional:configserver:http://unduck-config:8888
+
   cloud:
     config:
-      uri: http://unduck-config:8888
+      enabled: true
       fail-fast: true
       retry:
         max-attempts: 5
-        initial-interval: 2000
-      profile: prod
-      label: main
+        max-interval: 2000
+        initial-interval: 1000
 
 eureka:
   client:

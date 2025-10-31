@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   # Config Server
   config:
@@ -7,10 +9,18 @@ services:
     container_name: unduck-config
     ports:
       - "8888:8888"
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      GIT_USERNAME: zmgu
+      GIT_USERNAME: ${GIT_USERNAME}
       GIT_TOKEN: ${GIT_TOKEN}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8888/actuator/health || exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - unduck-network
     restart: always
@@ -25,12 +35,16 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_CLOUD_CONFIG_URI: http://config:8888  # 변경됨
+      SPRING_CLOUD_CONFIG_URI: http://config:8888
     depends_on:
-      - config
-      - auth
-      - platform
-      - redis
+      config:
+        condition: service_healthy
+      auth:
+        condition: service_started
+      platform:
+        condition: service_started
+      redis:
+        condition: service_started
     networks:
       - unduck-network
     restart: always
@@ -45,12 +59,15 @@ services:
       - "8081:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_CLOUD_CONFIG_URI: http://config:8888  # 변경됨
+      SPRING_CLOUD_CONFIG_URI: http://config:8888
       AUTH_DB_PASSWORD: root1234
     depends_on:
-      - config
-      - auth-mysql
-      - redis
+      config:
+        condition: service_healthy
+      auth-mysql:
+        condition: service_started
+      redis:
+        condition: service_started
     networks:
       - unduck-network
     restart: always
@@ -65,18 +82,20 @@ services:
       - "8082:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_CLOUD_CONFIG_URI: http://config:8888  # 변경됨
+      SPRING_CLOUD_CONFIG_URI: http://config:8888
       PLATFORM_DB_PASSWORD: root1234
     depends_on:
-      - config
-      - auth-mysql
+      config:
+        condition: service_healthy
+      auth-mysql:
+        condition: service_started
     networks:
       - unduck-network
     restart: always
 
-  # Auth MySQL
+  # MySQL (Auth DB)
   auth-mysql:
-    image: mysql:latest
+    image: mysql:8.4.0
     container_name: unduck-auth-mysql
     environment:
       MYSQL_ROOT_PASSWORD: root1234
@@ -87,10 +106,11 @@ services:
       - auth-db-data:/var/lib/mysql
     networks:
       - unduck-network
+    restart: always
 
   # Redis
   redis:
-    image: redis:latest
+    image: redis:7.4.1
     container_name: unduck-redis
     ports:
       - "6379:6379"
@@ -98,8 +118,9 @@ services:
       - redis-data:/data
     networks:
       - unduck-network
+    restart: always
 
-  # Frontend
+  # Frontend (React)
   frontend:
     build:
       context: ./frontend/unduck-frontend-app
@@ -110,9 +131,11 @@ services:
     environment:
       - REACT_APP_GATEWAY_URL=http://localhost:8080
     depends_on:
-      - gateway
+      gateway:
+        condition: service_started
     networks:
       - unduck-network
+    restart: always
 
 # 네트워크 & 볼륨 정의
 networks:
