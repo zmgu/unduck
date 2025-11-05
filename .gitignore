@@ -5,8 +5,6 @@
 build/
 out/
 !gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**
-!**/src/test/**
 
 # -------------------------------------
 # IntelliJ / VSCode / Eclipse 등 IDE 관련
@@ -32,11 +30,7 @@ temp/
 # -------------------------------------
 # 운영 및 환경 설정 관련
 # -------------------------------------
-application-*.yml
-application-*.properties
 .env
-*.local.yml
-*.local.properties
 
 # -------------------------------------
 # 빌드 산출물
