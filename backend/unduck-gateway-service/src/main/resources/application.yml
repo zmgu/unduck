@@ -1,6 +1,12 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: unduck-gateway-service
+
+  config:
+    import: "optional:configserver:http://config:8888"
 
 management:
   endpoints:

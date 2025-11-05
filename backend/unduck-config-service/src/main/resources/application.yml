@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: unduck-config-server
+    name: unduck-config-service
 
   profiles:
     active: git
@@ -12,16 +12,20 @@ spring:
     config:
       server:
         git:
-          uri: https://github.com/zmgu/unduck-config.git   # GitHub Config Repo URL
+          uri: https://github.com/zmgu/unduck-config.git   # GitHub Config Repo
           username: ${GIT_USERNAME}
           password: ${GIT_TOKEN}
           default-label: main
-          clone-on-start: true
           search-paths: config
-          force-pull: true   # 로컬 캐시가 있을 경우 항상 최신으로 갱신
+          clone-on-start: true
+          force-pull: true   # 항상 최신 버전으로 동기화
 
 management:
   endpoints:
     web:
+      base-path: /actuator         # health/info 엔드포인트 분리
       exposure:
-        include: "*"
+        include: health,info       # 보안상 * 대신 필요한 항목만 노출
+  endpoint:
+    health:
+      show-details: always         # "status": "UP" 세부정보 표시
