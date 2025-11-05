@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # Config Server
   config:
@@ -17,8 +15,18 @@ services:
       GIT_TOKEN: ${GIT_TOKEN}
     networks:
       - unduck-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "status=$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8888/actuator/health/configServer || echo '000'); \
+           if [ $$status -eq 200 ]; then exit 0; else exit 1; fi"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     restart: always
-
 
   # Gateway Service
   gateway:
@@ -90,17 +98,24 @@ services:
 
   # MySQL (Auth DB)
   auth-mysql:
-    image: mysql:8.4.0
+    image: mysql:8.4.2
     container_name: unduck-auth-mysql
     environment:
       MYSQL_ROOT_PASSWORD: root1234
       MYSQL_DATABASE: unduck_auth_mysql
+      MYSQL_ROOT_HOST: "%"
+      TZ: Asia/Seoul
     ports:
       - "3307:3306"
     volumes:
       - auth-db-data:/var/lib/mysql
     networks:
       - unduck-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: always
 
   # Redis
@@ -124,7 +139,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_GATEWAY_URL=http://localhost:8080
+      REACT_APP_GATEWAY_URL: http://gateway:8080
     depends_on:
       gateway:
         condition: service_started
@@ -132,7 +147,7 @@ services:
       - unduck-network
     restart: always
 
-# 네트워크 & 볼륨
+# Networks & Volumes
 networks:
   unduck-network:
     driver: bridge
