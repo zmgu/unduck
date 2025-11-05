@@ -5,7 +5,7 @@ spring:
   config:
     activate:
       on-profile: local
-    import: optional:configserver:http://localhost:8888   # ✅ 추가된 핵심 라인
+    import: optional:configserver:http://localhost:8888
 
   cloud:
     config:
@@ -14,3 +14,9 @@ spring:
         max-attempts: 5
         max-interval: 2000
         initial-interval: 1000
+      label: main
+      profile: local
+
+eureka:
+  client:
+    enabled: false

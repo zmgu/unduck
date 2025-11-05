@@ -15,15 +15,10 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       GIT_USERNAME: ${GIT_USERNAME}
       GIT_TOKEN: ${GIT_TOKEN}
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8888/actuator/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
     networks:
       - unduck-network
     restart: always
+
 
   # Gateway Service
   gateway:
@@ -34,8 +29,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_CLOUD_CONFIG_URI: http://config:8888
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config:8888"
     depends_on:
       config:
         condition: service_healthy
@@ -58,8 +53,8 @@ services:
     ports:
       - "8081:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_CLOUD_CONFIG_URI: http://config:8888
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config:8888"
       AUTH_DB_PASSWORD: root1234
     depends_on:
       config:
@@ -81,8 +76,8 @@ services:
     ports:
       - "8082:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_CLOUD_CONFIG_URI: http://config:8888
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config:8888"
       PLATFORM_DB_PASSWORD: root1234
     depends_on:
       config:
@@ -120,7 +115,7 @@ services:
       - unduck-network
     restart: always
 
-  # Frontend (React)
+  # Frontend
   frontend:
     build:
       context: ./frontend/unduck-frontend-app
@@ -137,7 +132,7 @@ services:
       - unduck-network
     restart: always
 
-# 네트워크 & 볼륨 정의
+# 네트워크 & 볼륨
 networks:
   unduck-network:
     driver: bridge

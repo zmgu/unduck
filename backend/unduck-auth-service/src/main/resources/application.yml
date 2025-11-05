@@ -1,20 +1,12 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: unduck-auth-service
 
-  cloud:
-    config:
-      uri: http://unduck-config:8888
-      fail-fast: true        # Config 서버 연결 실패 시 즉시 종료
-      retry:
-        max-attempts: 5
-        initial-interval: 2000
-      profile: prod          # 활성 프로필
-      label: main            # Git branch
-
-eureka:
-  client:
-    enabled: false
+  profiles:
+    active: local
 
 management:
   endpoint:

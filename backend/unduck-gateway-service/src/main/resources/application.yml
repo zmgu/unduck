@@ -2,24 +2,11 @@ spring:
   application:
     name: unduck-gateway-service
 
-  config:
-    import: optional:configserver:http://unduck-config:8888
-
-  cloud:
-    config:
-      enabled: true
-      fail-fast: true
-      retry:
-        max-attempts: 5
-        max-interval: 2000
-        initial-interval: 1000
-
-eureka:
-  client:
-    enabled: false
-
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health, info
+  endpoint:
+    health:
+      show-details: always

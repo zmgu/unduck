@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+
+  # Auth MySQL
+  auth-mysql:
+    image: mysql:8.4.0
+    container_name: unduck-auth-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_DATABASE: unduck_auth_mysql
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3307:3306"
+    volumes:
+      - auth-db-data:/var/lib/mysql
+    networks:
+      - unduck-network
+
+  # Redis
+  redis:
+    image: redis:7.4.1
+    container_name: unduck-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - unduck-network
+
+# 네트워크 & 볼륨 정의
+networks:
+  unduck-network:
+    driver: bridge
+
+volumes:
+  auth-db-data:
+  redis-data:
