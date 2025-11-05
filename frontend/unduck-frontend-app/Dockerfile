@@ -1,17 +1,18 @@
-FROM node:22-alpine AS builder
+# Build React App
+FROM node:22-slim AS builder
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci
-
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine
+# Serve
+FROM node:22-slim
 WORKDIR /app
 
 ENV NODE_ENV=production
-COPY --from=builder /app/dist dist
+COPY --from=builder /app/dist ./dist
 RUN npm install -g serve
 
 EXPOSE 3000
