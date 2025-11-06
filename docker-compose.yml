@@ -101,7 +101,7 @@ services:
     image: mysql:8.0.33
     container_name: unduck-auth-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_ROOT_PASSWORD: ${UNDUCK_AUTH_MYSQL_PASSWORD}
       MYSQL_DATABASE: unduck_auth_mysql
       MYSQL_ROOT_HOST: "%"
       TZ: Asia/Seoul
