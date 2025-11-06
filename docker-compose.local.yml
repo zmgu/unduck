@@ -1,7 +1,7 @@
 services:
   # MySQL (Auth DB)
   auth-mysql:
-    image: mysql:8.4.2
+    image: mysql:8.0.33
     container_name: unduck-auth-mysql
     environment:
       MYSQL_ROOT_PASSWORD: root1234
