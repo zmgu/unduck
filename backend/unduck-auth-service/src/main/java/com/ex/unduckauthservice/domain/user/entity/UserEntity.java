@@ -1,5 +1,6 @@
 package com.ex.unduckauthservice.domain.user.entity;
 
+import com.ex.unduckauthservice.domain.user.dto.UserRequestDTO;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -57,5 +58,10 @@ public class UserEntity {
     @LastModifiedDate
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
+
+    public void updateUser(UserRequestDTO dto) {
+        this.email = dto.getEmail();
+        this.nickname = dto.getNickname();
+    }
 
 }
