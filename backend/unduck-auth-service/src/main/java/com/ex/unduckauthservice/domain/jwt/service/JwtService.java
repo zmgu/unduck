@@ -1,10 +1,10 @@
 package com.ex.unduckauthservice.domain.jwt.service;
 
-import com.ex.unduckauthservice.domain.jwt.dto.JWTResponseDTO;
+import com.ex.unduckauthservice.domain.jwt.dto.JwtResponseDTO;
 import com.ex.unduckauthservice.domain.jwt.dto.RefreshTokenRequestDTO;
 import com.ex.unduckauthservice.domain.jwt.entity.RefreshTokenEntity;
 import com.ex.unduckauthservice.domain.jwt.repository.RefreshTokenRedisRepository;
-import com.ex.unduckauthservice.domain.jwt.util.JWTUtil;
+import com.ex.unduckauthservice.domain.jwt.util.JwtUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,12 +13,12 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class RefreshTokenService {
+public class JwtService {
 
     private final RefreshTokenRedisRepository refreshTokenRedisRepository;
 
     // 소셜 로그인 성공 후 쿠키(Refresh) -> 헤더 방식으로 응답
-    public JWTResponseDTO cookie2Header(
+    public JwtResponseDTO cookie2Header(
             HttpServletRequest request,
             HttpServletResponse response
     ) {
@@ -43,18 +43,18 @@ public class RefreshTokenService {
         }
 
         // Refresh 토큰 검증
-        Boolean isValid = JWTUtil.isValid(refreshToken, false);
+        Boolean isValid = JwtUtil.isValid(refreshToken, false);
         if (!isValid) {
             throw new RuntimeException("유효하지 않은 refreshToken입니다.");
         }
 
         // 정보 추출
-        String username = JWTUtil.getUsername(refreshToken);
-        String role = JWTUtil.getRole(refreshToken);
+        String username = JwtUtil.getUsername(refreshToken);
+        String role = JwtUtil.getRole(refreshToken);
 
         // 토큰 생성
-        String newAccessToken = JWTUtil.createJWT(username, role, true);
-        String newRefreshToken = JWTUtil.createJWT(username, role, false);
+        String newAccessToken = JwtUtil.createJWT(username, role, true);
+        String newRefreshToken = JwtUtil.createJWT(username, role, false);
 
 
         refreshTokenRedisRepository.refreshTokenDelete(refreshToken);
@@ -67,15 +67,15 @@ public class RefreshTokenService {
         refreshCookie.setMaxAge(10);
         response.addCookie(refreshCookie);
 
-        return new JWTResponseDTO(newAccessToken, newRefreshToken);
+        return new JwtResponseDTO(newAccessToken, newRefreshToken);
     }
 
-    public JWTResponseDTO refreshRotate(RefreshTokenRequestDTO dto) {
+    public JwtResponseDTO refreshRotate(RefreshTokenRequestDTO dto) {
 
         String refreshToken = dto.getRefreshToken();
 
         // Refresh 토큰 검증
-        Boolean isValid = JWTUtil.isValid(refreshToken, false);
+        Boolean isValid = JwtUtil.isValid(refreshToken, false);
         if (!isValid) {
             throw new RuntimeException("유효하지 않은 refreshToken입니다.");
         }
@@ -86,12 +86,12 @@ public class RefreshTokenService {
         }
 
         // 정보 추출
-        String username = JWTUtil.getUsername(refreshToken);
-        String role = JWTUtil.getRole(refreshToken);
+        String username = JwtUtil.getUsername(refreshToken);
+        String role = JwtUtil.getRole(refreshToken);
 
         // 토큰 생성
-        String newAccessToken = JWTUtil.createJWT(username, role, true);
-        String newRefreshToken = JWTUtil.createJWT(username, role, false);
+        String newAccessToken = JwtUtil.createJWT(username, role, true);
+        String newRefreshToken = JwtUtil.createJWT(username, role, false);
 
         // 기존 Refresh 토큰 DB 삭제 후 신규 추가
         RefreshTokenEntity newRefreshEntity = RefreshTokenEntity.builder()
@@ -102,7 +102,7 @@ public class RefreshTokenService {
         removeRefreshToken(refreshToken);
         saveRefreshToken(newRefreshEntity);
 
-        return new JWTResponseDTO(newAccessToken, newRefreshToken);
+        return new JwtResponseDTO(newAccessToken, newRefreshToken);
     }
 
     public void saveRefreshToken(RefreshTokenEntity refreshTokenEntity) {

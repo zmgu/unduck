@@ -1,6 +1,6 @@
 package com.ex.unduckauthservice.domain.user.service;
 
-import com.ex.unduckauthservice.domain.jwt.service.RefreshTokenService;
+import com.ex.unduckauthservice.domain.jwt.service.JwtService;
 import com.ex.unduckauthservice.domain.user.dto.CustomOAuth2User;
 import com.ex.unduckauthservice.domain.user.dto.UserRequestDTO;
 import com.ex.unduckauthservice.domain.user.dto.UserResponseDTO;
@@ -33,9 +33,9 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
-    private final RefreshTokenService jwtService;
+    private final JwtService jwtService;
 
-    public UserService(PasswordEncoder passwordEncoder, UserRepository userRepository, RefreshTokenService jwtService) {
+    public UserService(PasswordEncoder passwordEncoder, UserRepository userRepository, JwtService jwtService) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
