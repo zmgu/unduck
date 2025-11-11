@@ -14,13 +14,28 @@ spring:
           default-label: main
           username: ${GIT_USERNAME}
           password: ${GIT_TOKEN}
+          clone-on-start: true
+          force-pull: true
+          timeout: 10
+          skip-ssl-validation: false
+      fail-fast: true
+      retry:
+        max-attempts: 3
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 5000
 
 management:
   endpoints:
     web:
       base-path: /actuator
       exposure:
-        include: health,info
+        include: health, info
   endpoint:
     health:
       show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.config: DEBUG
+    org.eclipse.jgit: WARN
