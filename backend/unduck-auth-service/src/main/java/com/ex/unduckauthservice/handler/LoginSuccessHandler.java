@@ -1,9 +1,9 @@
 package com.ex.unduckauthservice.handler;
 
-import com.ex.unduckauthservice.domain.jwt.entity.RefreshTokenEntity;
 import com.ex.unduckauthservice.domain.jwt.service.JwtService;
-import com.ex.unduckauthservice.domain.jwt.util.JwtUtil;
-import jakarta.servlet.ServletException;
+import com.ex.unduckauthservice.util.CookieUtil;
+import com.ex.unduckauthservice.util.JwtUtil;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,31 +22,27 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtService jwtService;
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        Authentication authentication)
+            throws IOException {
 
-        // username, role
         String username = authentication.getName();
         String role = authentication.getAuthorities().iterator().next().getAuthority();
 
-        // JWT(Access/Refresh) 발급
-        String accessToken = JwtUtil.createJWT(username, role, true);
+        // 1️⃣ Refresh Token 발급
         String refreshToken = JwtUtil.createJWT(username, role, false);
 
-        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()
-                .refreshToken(refreshToken)
-                .username(username)
-                .build();
+        jwtService.saveRefreshToken(refreshToken, username);
 
-        // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
-        jwtService.saveRefreshToken(refreshTokenEntity);
+        // 2️⃣ RefreshToken 쿠키 저장
+        CookieUtil.addCookie(response, "refreshToken", refreshToken, 60 * 60 * 24 * 14);
 
-        // 응답
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
 
-        String json = String.format("{\"accessToken\":\"%s\", \"refreshToken\":\"%s\"}", accessToken, refreshToken);
-        response.getWriter().write(json);
-        response.getWriter().flush();
+        // ✅ 3️⃣ JSON 응답으로 React 쪽 cookie 페이지로 이동하도록 지정
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"redirectUri\":\"/cookie\"}");
     }
-
 }
+
+

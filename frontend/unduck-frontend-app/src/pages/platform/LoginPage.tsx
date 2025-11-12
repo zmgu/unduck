@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // .env로 부터 백엔드 URL 받아오기
 const BACKEND_API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL;
@@ -10,41 +10,42 @@ function LoginPage() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
+    useEffect(() => {
+        // ✅ 로그인 페이지 진입 시, redirectPath가 비어있으면 기본 "/" 저장
+        if (!localStorage.getItem("redirectPath")) {
+        localStorage.setItem("redirectPath", "/");
+        }
+    }, []);
+
     // 자체 로그인 이벤트
     const handleLogin = async (e) => {
-
         e.preventDefault();
-        setError("");
 
-        if (username === "" || password === "") {
-            setError("아이디와 비밀번호를 입력하세요.");
-            return;
-        }
-
-        // API 요청
         try {
-            const res = await fetch(`${BACKEND_API_BASE_URL}/login`, {
-                method: "POST",
-                headers: {"Content-Type": "application/json",},
-                credentials: "include",
-                body: JSON.stringify({ username, password }),
-            });
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_API_BASE_URL}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ username, password }),
+        });
 
-            if (!res.ok) throw new Error("로그인 실패");
+        if (!res.ok) throw new Error("로그인 실패");
 
-            const data = await res.json();
-            localStorage.setItem("accessToken", data.accessToken);
-            localStorage.setItem("refreshToken", data.refreshToken);
+        const data = await res.json();
+        window.location.href = data.redirectUri; // /cookie로 이동
         } catch (err) {
-            setError("아이디 또는 비밀번호가 틀렸습니다.");
+        alert("아이디 또는 비밀번호가 틀렸습니다.");
         }
-
     };
+
 
     // 소셜 로그인 이벤트
     const handleSocialLogin = (provider) => {
-        window.location.href = `http://localhost:8081/oauth2/authorization/google?redirect_uri=${encodeURIComponent(window.location.origin)}`;
+        window.location.href = `http://localhost:8080/auth/oauth2/authorization/${provider}?target_uri=${encodeURIComponent(window.location.origin)}`;
+
     };
+
+
 
     // 페이지
     return (

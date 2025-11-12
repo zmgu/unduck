@@ -4,7 +4,8 @@ import com.ex.unduckauthservice.domain.jwt.dto.JwtResponseDTO;
 import com.ex.unduckauthservice.domain.jwt.dto.RefreshTokenRequestDTO;
 import com.ex.unduckauthservice.domain.jwt.entity.RefreshTokenEntity;
 import com.ex.unduckauthservice.domain.jwt.repository.RefreshTokenRedisRepository;
-import com.ex.unduckauthservice.domain.jwt.util.JwtUtil;
+import com.ex.unduckauthservice.util.CookieUtil;
+import com.ex.unduckauthservice.util.JwtUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,10 +19,7 @@ public class JwtService {
     private final RefreshTokenRedisRepository refreshTokenRedisRepository;
 
     // 소셜 로그인 성공 후 쿠키(Refresh) -> 헤더 방식으로 응답
-    public JwtResponseDTO cookie2Header(
-            HttpServletRequest request,
-            HttpServletResponse response
-    ) {
+    public JwtResponseDTO cookie2Header(HttpServletRequest request, HttpServletResponse response) {
 
         // 쿠키 리스트
         Cookie[] cookies = request.getCookies();
@@ -60,12 +58,7 @@ public class JwtService {
         refreshTokenRedisRepository.refreshTokenDelete(refreshToken);
 
         // 기존 쿠키 제거
-        Cookie refreshCookie = new Cookie("refreshToken", null);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(false);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(10);
-        response.addCookie(refreshCookie);
+        CookieUtil.deleteCookie(response, "refreshToken");
 
         return new JwtResponseDTO(newAccessToken, newRefreshToken);
     }
@@ -94,18 +87,19 @@ public class JwtService {
         String newRefreshToken = JwtUtil.createJWT(username, role, false);
 
         // 기존 Refresh 토큰 DB 삭제 후 신규 추가
-        RefreshTokenEntity newRefreshEntity = RefreshTokenEntity.builder()
-                .username(username)
-                .refreshToken(newRefreshToken)
-                .build();
-
         removeRefreshToken(refreshToken);
-        saveRefreshToken(newRefreshEntity);
+        saveRefreshToken(refreshToken, username);
 
         return new JwtResponseDTO(newAccessToken, newRefreshToken);
     }
 
-    public void saveRefreshToken(RefreshTokenEntity refreshTokenEntity) {
+    public void saveRefreshToken(String refreshToken, String username) {
+
+        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()
+                .refreshToken(refreshToken)
+                .username(username)
+                .build();
+
         refreshTokenRedisRepository.refreshTokenSave(refreshTokenEntity);
     }
 

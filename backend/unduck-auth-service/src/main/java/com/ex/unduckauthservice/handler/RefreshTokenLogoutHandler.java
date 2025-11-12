@@ -1,7 +1,7 @@
 package com.ex.unduckauthservice.handler;
 
 import com.ex.unduckauthservice.domain.jwt.service.JwtService;
-import com.ex.unduckauthservice.domain.jwt.util.JwtUtil;
+import com.ex.unduckauthservice.util.JwtUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;

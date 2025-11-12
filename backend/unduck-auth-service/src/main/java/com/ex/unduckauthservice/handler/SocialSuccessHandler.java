@@ -1,8 +1,8 @@
 package com.ex.unduckauthservice.handler;
 
-import com.ex.unduckauthservice.domain.jwt.entity.RefreshTokenEntity;
 import com.ex.unduckauthservice.domain.jwt.service.JwtService;
-import com.ex.unduckauthservice.domain.jwt.util.JwtUtil;
+import com.ex.unduckauthservice.util.CookieUtil;
+import com.ex.unduckauthservice.util.JwtUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,47 +28,21 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
                                         Authentication authentication)
             throws IOException, ServletException {
 
-        // 1️⃣ 인증된 사용자 정보
         String username = authentication.getName();
         String role = authentication.getAuthorities().iterator().next().getAuthority();
 
-        // 2️⃣ Refresh Token 발급
-        String refreshToken = JwtUtil.createJWT(username, "ROLE_" + role, false);
+        System.out.println("✅ SocialSuccessHandler invoked for user: " + username);
 
-        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()
-                .refreshToken(refreshToken)
-                .username(username)
-                .build();
+        // Refresh Token 발급
+        String refreshToken = JwtUtil.createJWT(username, role, false);
 
-        jwtService.saveRefreshToken(refreshTokenEntity);
+        jwtService.saveRefreshToken(refreshToken, username);
 
-        // 3️⃣ 쿠키에 Refresh Token 저장
-        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(false); // HTTPS 시 true
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(10); // 프론트에서 즉시 헤더 전환 로직 예정
-        response.addCookie(refreshCookie);
+        // RefreshToken 쿠키 저장
+        CookieUtil.addCookie(response, "refreshToken", refreshToken, 60 * 60 * 24 * 14);
 
-        // 4️⃣ redirect_uri 쿠키 읽기
-        String redirectUri = null;
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("redirect_uri".equals(cookie.getName())) {
-                    redirectUri = cookie.getValue();
-                    cookie.setMaxAge(0); // 한 번 사용 후 삭제
-                    cookie.setPath("/");
-                    response.addCookie(cookie);
-                    break;
-                }
-            }
-        }
-
-        // 5️⃣ 리다이렉트 대상 설정
-        if (redirectUri == null || redirectUri.isBlank()) {
-            redirectUri = "http://localhost:5173"; // 기본 리다이렉트 URI (플랫폼 메인)
-        }
-
+        // ✅ 항상 /cookie 로 리다이렉트
+        String redirectUri = "http://localhost:5173/cookie";
         response.sendRedirect(redirectUri);
     }
 }

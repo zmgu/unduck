@@ -1,6 +1,6 @@
 package com.ex.unduckauthservice.filter;
 
-import com.ex.unduckauthservice.domain.jwt.util.JwtUtil;
+import com.ex.unduckauthservice.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

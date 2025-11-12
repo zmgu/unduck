@@ -1,4 +1,4 @@
-package com.ex.unduckauthservice.domain.jwt.util;
+package com.ex.unduckauthservice.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
