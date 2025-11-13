@@ -122,7 +122,6 @@ public class SecurityConfig {
         // 로그아웃 설정
         http.logout(logout -> logout
                 .logoutUrl("/never-use-this-url")
-                .deleteCookies("accessToken", "refreshToken")
                 .addLogoutHandler(new RefreshTokenLogoutHandler(jwtService))
                 .logoutSuccessHandler((request, response, authentication) -> {
                     response.setStatus(HttpServletResponse.SC_OK);
@@ -138,7 +137,7 @@ public class SecurityConfig {
 
         // 인가
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/jwt/refresh").permitAll() // ✅ /jwt/exchange 제거
+                .requestMatchers("/jwt/refresh").permitAll()
                 .requestMatchers(HttpMethod.POST, "/user/exist", "/user").permitAll()
                 .requestMatchers(HttpMethod.GET, "/user").hasRole(UserRoleType.USER.name())
                 .requestMatchers(HttpMethod.PUT, "/user").hasRole(UserRoleType.USER.name())
