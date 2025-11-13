@@ -1,6 +1,7 @@
 package com.ex.unduckauthservice.api;
 
-import com.ex.unduckauthservice.util.CookieUtil;
+import com.ex.unduckauthservice.domain.jwt.service.JwtService;
+import com.ex.unduckauthservice.handler.RefreshTokenLogoutHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LogoutApi {
 
+    private final JwtService jwtService;
+
     /**
      * 로그아웃
      * - Refresh Token Redis 삭제 (RefreshTokenLogoutHandler가 처리)
@@ -39,16 +42,11 @@ public class LogoutApi {
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null) {
-            String username = authentication.getName();
-            log.info("🔓 로그아웃 요청 - Username: {}, RedirectService: {}", username, redirectService);
 
+        if (authentication != null) {
+            new RefreshTokenLogoutHandler(jwtService).logout(request, response, authentication);
             new SecurityContextLogoutHandler().logout(request, response, authentication);
         }
-
-        // 쿠키 강제 삭제
-        CookieUtil.deleteCookie(response, "accessToken");
-        CookieUtil.deleteCookie(response, "refreshToken");
 
         String redirectUrl = buildRedirectUrl(redirectService);
 

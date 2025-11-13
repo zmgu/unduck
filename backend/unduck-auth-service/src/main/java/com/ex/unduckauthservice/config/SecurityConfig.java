@@ -110,23 +110,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        // CSRF 보안 필터 ,기본 Form 기반 인증 필터들 ,기본 Basic 인증 필터 disable
+        // CSRF 보안 필터 ,기본 Form 기반 인증 필터들 ,기본 Basic 인증 필터, 기본 logout disable
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable);
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable);
 
         // CORS 설정
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
-
-        // 로그아웃 설정
-        http.logout(logout -> logout
-                .logoutUrl("/never-use-this-url")
-                .addLogoutHandler(new RefreshTokenLogoutHandler(jwtService))
-                .logoutSuccessHandler((request, response, authentication) -> {
-                    response.setStatus(HttpServletResponse.SC_OK);
-                })
-        );
 
         // OAuth2 인증용 (커스텀 Resolver 적용)
         http.oauth2Login(oauth2 -> oauth2
