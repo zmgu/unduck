@@ -1,26 +1,38 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
+// Common Pages
 import JoinPage from "./pages/common/JoinPage";
-import LoginPage from "./pages/platform/LoginPage";
-import CookiePage from "./pages/common/CookiePage";
-import UserPage from "./pages/platform/UserPage";
-import PlatfromMain from "./pages/platform/PlatformMain";
 
-import './App.css'
+// Platform Pages
+import PlatformLoginPage from "./pages/platform/PlatformLoginPage";
+import PlatformMainPage from "./pages/platform/PlatformMainPage"; // 추가 필요
+
+// Game Pages (향후 추가)
+import GameLoginPage from "./pages/game/GameLoginPage";
+import GameMainPage from "./pages/game/GameMainPage"; // 추가 필요
+
 
 function App() {
-
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PlatfromMain />} />
+        {/* 루트 경로 - 플랫폼 메인으로 리다이렉트 */}
+        <Route path="/" element={<Navigate to="/platform" replace />} />
+
+        {/* 공통 페이지 */}
         <Route path="/join" element={<JoinPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/cookie" element={<CookiePage />} />
-        <Route path="/user" element={<UserPage />} />
+
+        {/* 플랫폼 서비스 */}
+        <Route path="/platform/login" element={<PlatformLoginPage />} />
+        <Route path="/platform" element={<PlatformMainPage />} />
+
+        {/* 게임 서비스 */}
+        <Route path="/game/login" element={<GameLoginPage />} />
+        <Route path="/game" element={<GameMainPage />} />
+
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

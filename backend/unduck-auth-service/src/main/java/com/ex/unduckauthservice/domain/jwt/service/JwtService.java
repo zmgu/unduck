@@ -1,16 +1,15 @@
 package com.ex.unduckauthservice.domain.jwt.service;
 
-import com.ex.unduckauthservice.domain.jwt.dto.JwtResponseDTO;
-import com.ex.unduckauthservice.domain.jwt.dto.RefreshTokenRequestDTO;
 import com.ex.unduckauthservice.domain.jwt.entity.RefreshTokenEntity;
 import com.ex.unduckauthservice.domain.jwt.repository.RefreshTokenRedisRepository;
 import com.ex.unduckauthservice.util.CookieUtil;
 import com.ex.unduckauthservice.util.JwtUtil;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,83 +17,65 @@ public class JwtService {
 
     private final RefreshTokenRedisRepository refreshTokenRedisRepository;
 
-    // 소셜 로그인 성공 후 쿠키(Refresh) -> 헤더 방식으로 응답
-    public JwtResponseDTO cookie2Header(HttpServletRequest request, HttpServletResponse response) {
+    /**
+     * ❌ 삭제됨 - cookie2Header
+     * 이제 로그인 시 즉시 두 토큰을 HttpOnly 쿠키로 발급
+     */
 
-        // 쿠키 리스트
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            throw new RuntimeException("쿠키가 존재하지 않습니다.");
+    /**
+     * HttpOnly 쿠키의 Refresh Token으로 Access Token 재발급
+     * - 쿠키에서 Refresh Token 추출
+     * - 검증 후 새 Access Token + Refresh Token 생성
+     * - 새 토큰들을 HttpOnly 쿠키로 발급
+     */
+    public void refreshTokensViaCookie(HttpServletRequest request, HttpServletResponse response) {
+
+        // 1. 쿠키에서 Refresh Token 추출
+        Optional<String> refreshTokenOpt = CookieUtil.getCookieValue(request, "refreshToken");
+
+        if (refreshTokenOpt.isEmpty()) {
+            // ✅ 비로그인 상태 - 401 반환 (예외 던지지 않음)
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
 
-        // Refresh 토큰 획득
-        String refreshToken = null;
-        for (Cookie cookie : cookies) {
-            if ("refreshToken".equals(cookie.getName())) {
-                refreshToken = cookie.getValue();
-                break;
-            }
+        String refreshToken = refreshTokenOpt.get();
+
+        // 2. Refresh Token 검증
+        if (!JwtUtil.isValid(refreshToken, false)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
 
-        if (refreshToken == null) {
-            throw new RuntimeException("refreshToken 쿠키가 없습니다.");
-        }
-
-        // Refresh 토큰 검증
-        Boolean isValid = JwtUtil.isValid(refreshToken, false);
-        if (!isValid) {
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
-        }
-
-        // 정보 추출
-        String username = JwtUtil.getUsername(refreshToken);
-        String role = JwtUtil.getRole(refreshToken);
-
-        // 토큰 생성
-        String newAccessToken = JwtUtil.createJWT(username, role, true);
-        String newRefreshToken = JwtUtil.createJWT(username, role, false);
-
-
-        refreshTokenRedisRepository.refreshTokenDelete(refreshToken);
-
-        // 기존 쿠키 제거
-        CookieUtil.deleteCookie(response, "refreshToken");
-
-        return new JwtResponseDTO(newAccessToken, newRefreshToken);
-    }
-
-    public JwtResponseDTO refreshRotate(RefreshTokenRequestDTO dto) {
-
-        String refreshToken = dto.getRefreshToken();
-
-        // Refresh 토큰 검증
-        Boolean isValid = JwtUtil.isValid(refreshToken, false);
-        if (!isValid) {
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
-        }
-
-        // RefreshEntity 존재 확인 (화이트리스트)
+        // 3. Redis에 존재하는지 확인 (화이트리스트)
         if (!existsRefreshToken(refreshToken)) {
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
 
-        // 정보 추출
+        // 4. 토큰에서 정보 추출
         String username = JwtUtil.getUsername(refreshToken);
         String role = JwtUtil.getRole(refreshToken);
 
-        // 토큰 생성
+        // 5. 새 토큰 생성
         String newAccessToken = JwtUtil.createJWT(username, role, true);
         String newRefreshToken = JwtUtil.createJWT(username, role, false);
 
-        // 기존 Refresh 토큰 DB 삭제 후 신규 추가
+        // 6. 기존 Refresh Token 삭제 후 신규 추가
         removeRefreshToken(refreshToken);
-        saveRefreshToken(refreshToken, username);
+        saveRefreshToken(newRefreshToken, username);
 
-        return new JwtResponseDTO(newAccessToken, newRefreshToken);
+        // 7. 새 토큰들을 HttpOnly 쿠키로 발급
+        CookieUtil.addSecureCookie(response, "accessToken", newAccessToken, 3600); // 1시간
+        CookieUtil.addSecureCookie(response, "refreshToken", newRefreshToken, 604800); // 7일
+
+        response.setStatus(HttpServletResponse.SC_OK);
     }
 
+    /**
+     * Refresh Token을 Redis에 저장
+     */
     public void saveRefreshToken(String refreshToken, String username) {
-
         RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()
                 .refreshToken(refreshToken)
                 .username(username)
@@ -103,12 +84,17 @@ public class JwtService {
         refreshTokenRedisRepository.refreshTokenSave(refreshTokenEntity);
     }
 
+    /**
+     * Refresh Token 존재 여부 확인
+     */
     public Boolean existsRefreshToken(String refreshToken) {
         return refreshTokenRedisRepository.refreshTokenExists(refreshToken);
     }
 
+    /**
+     * Refresh Token 삭제
+     */
     public void removeRefreshToken(String refreshToken) {
         refreshTokenRedisRepository.refreshTokenDelete(refreshToken);
     }
-
 }

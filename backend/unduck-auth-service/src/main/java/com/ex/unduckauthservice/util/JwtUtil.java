@@ -62,9 +62,11 @@ public class JwtUtil {
         long expiry = isAccess ? accessTokenExpiresIn : refreshTokenExpiresIn;
         String type = isAccess ? "access" : "refresh";
 
+        String roleWithPrefix = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+
         return Jwts.builder()
                 .claim("sub", username)
-                .claim("role", role)
+                .claim("role", roleWithPrefix)
                 .claim("type", type)
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + expiry))

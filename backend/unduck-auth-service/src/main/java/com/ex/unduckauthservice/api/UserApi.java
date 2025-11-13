@@ -37,10 +37,10 @@ public class UserApi {
         return ResponseEntity.status(201).body(responseBody);
     }
 
-    // 유저 정보
-    @GetMapping(value = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public UserResponseDTO userMeApi() {
-        return userService.readUser();
+    // 유저 정보 조회
+    @GetMapping("/user")
+    public ResponseEntity<UserResponseDTO> userMeApi() {
+        return ResponseEntity.ok(userService.readUser());
     }
 
     // 유저 수정 (자체 로그인 유저만)
@@ -50,5 +50,4 @@ public class UserApi {
     ) throws AccessDeniedException {
         return ResponseEntity.status(200).body(userService.updateUser(dto));
     }
-
 }

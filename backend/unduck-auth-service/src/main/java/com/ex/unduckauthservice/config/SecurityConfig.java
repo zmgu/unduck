@@ -1,8 +1,10 @@
 package com.ex.unduckauthservice.config;
 
 import com.ex.unduckauthservice.domain.jwt.service.JwtService;
+import com.ex.unduckauthservice.domain.oauth2.repository.OAuth2StateRedisRepository;
+import com.ex.unduckauthservice.domain.oauth2.resolver.CustomOAuth2AuthorizationRequestResolver;
 import com.ex.unduckauthservice.domain.user.entity.UserRoleType;
-import com.ex.unduckauthservice.filter.JwtFilter;
+import com.ex.unduckauthservice.filter.GatewayAuthenticationFilter;
 import com.ex.unduckauthservice.filter.LoginFilter;
 import com.ex.unduckauthservice.handler.RefreshTokenLogoutHandler;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,6 +23,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -34,26 +37,41 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
-    @Qualifier("LoginSuccessHandler") private final AuthenticationSuccessHandler loginSuccessHandler;
-    @Qualifier("SocialSuccessHandler") private final AuthenticationSuccessHandler socialSuccessHandler;
+    private final AuthenticationSuccessHandler loginSuccessHandler;
+    private final AuthenticationSuccessHandler socialSuccessHandler;
     private final JwtService jwtService;
+    private final OAuth2StateRedisRepository oAuth2StateRedisRepository;
+    private final ClientRegistrationRepository clientRegistrationRepository;
+
+    public SecurityConfig(
+            AuthenticationConfiguration authenticationConfiguration,
+            @Qualifier("LoginSuccessHandler") AuthenticationSuccessHandler loginSuccessHandler,
+            @Qualifier("SocialSuccessHandler") AuthenticationSuccessHandler socialSuccessHandler,
+            JwtService jwtService,
+            OAuth2StateRedisRepository oAuth2StateRedisRepository,
+            ClientRegistrationRepository clientRegistrationRepository
+    ) {
+        this.authenticationConfiguration = authenticationConfiguration;
+        this.loginSuccessHandler = loginSuccessHandler;
+        this.socialSuccessHandler = socialSuccessHandler;
+        this.jwtService = jwtService;
+        this.oAuth2StateRedisRepository = oAuth2StateRedisRepository;
+        this.clientRegistrationRepository = clientRegistrationRepository;
+    }
 
     @Bean
     public ForwardedHeaderFilter forwardedHeaderFilter() {
         return new ForwardedHeaderFilter();
     }
 
-    // 커스텀 자체 로그인 필터를 위한 AuthenticationManager Bean 수동 등록
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
-    // 권한 계층
     @Bean
     public RoleHierarchy roleHierarchy() {
         return RoleHierarchyImpl.withRolePrefix("ROLE_")
@@ -61,13 +79,11 @@ public class SecurityConfig {
                 .build();
     }
 
-    // 비밀번호 단방향(BCrypt) 암호화용 Bean
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // CORS Bean
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -83,70 +99,76 @@ public class SecurityConfig {
         return source;
     }
 
-    // SecurityFilterChain
+    @Bean
+    public CustomOAuth2AuthorizationRequestResolver customOAuth2AuthorizationRequestResolver() {
+        return new CustomOAuth2AuthorizationRequestResolver(
+                clientRegistrationRepository,
+                oAuth2StateRedisRepository
+        );
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        // CSRF 보안 필터 disable
+        // CSRF 보안 필터 ,기본 Form 기반 인증 필터들 ,기본 Basic 인증 필터 disable
         http
-                .csrf(AbstractHttpConfigurer::disable);
-
-        // CORS 설정
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()));
-
-        // 기본 로그아웃 필터 + 커스텀 Refresh 토큰 삭제 핸들러 추가
-        http
-                .logout(logout -> logout
-                        .addLogoutHandler(new RefreshTokenLogoutHandler(jwtService)));
-
-        // 기본 Form 기반 인증 필터들 disable
-        http
-                .formLogin(AbstractHttpConfigurer::disable);
-
-        // 기본 Basic 인증 필터 disable
-        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable);
 
-        // OAuth2 인증용
-        http
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(socialSuccessHandler));
+        // CORS 설정
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
+
+        // 로그아웃 설정
+        http.logout(logout -> logout
+                .logoutUrl("/never-use-this-url")
+                .deleteCookies("accessToken", "refreshToken")
+                .addLogoutHandler(new RefreshTokenLogoutHandler(jwtService))
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    response.setStatus(HttpServletResponse.SC_OK);
+                })
+        );
+
+        // OAuth2 인증용 (커스텀 Resolver 적용)
+        http.oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(authorization -> authorization
+                        .authorizationRequestResolver(customOAuth2AuthorizationRequestResolver())
+                )
+                .successHandler(socialSuccessHandler));
 
         // 인가
-        http
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/jwt/exchange", "/jwt/refresh").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/user/exist", "/user").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/user").hasRole(UserRoleType.USER.name())
-                        .requestMatchers(HttpMethod.PUT, "/user").hasRole(UserRoleType.USER.name())
-                        .requestMatchers(HttpMethod.DELETE, "/user").hasRole(UserRoleType.USER.name())
-                        .anyRequest().authenticated()
-                );
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/jwt/refresh").permitAll() // ✅ /jwt/exchange 제거
+                .requestMatchers(HttpMethod.POST, "/user/exist", "/user").permitAll()
+                .requestMatchers(HttpMethod.GET, "/user").hasRole(UserRoleType.USER.name())
+                .requestMatchers(HttpMethod.PUT, "/user").hasRole(UserRoleType.USER.name())
+                .requestMatchers(HttpMethod.DELETE, "/user").hasRole(UserRoleType.USER.name())
+                .anyRequest().authenticated()
+        );
 
         // 예외 처리
-        http
-                .exceptionHandling(e -> e
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED); // 401 응답
-                        })
-                        .accessDeniedHandler((request, response, authException) -> {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN); // 403 응답
-                        })
-                );
+        http.exceptionHandling(e -> e
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                })
+                .accessDeniedHandler((request, response, authException) -> {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                })
+        );
 
-        // 커스텀 필터 추가
-        http
-                .addFilterBefore(new JwtFilter(), LogoutFilter.class);
-        http
-                .addFilterBefore(new LoginFilter(authenticationManager(authenticationConfiguration), loginSuccessHandler), UsernamePasswordAuthenticationFilter.class);
+        // Gateway에서 전달된 사용자 정보로 SecurityContext 설정하는 필터 추가
+        http.addFilterBefore(new GatewayAuthenticationFilter(), LogoutFilter.class);
 
-        // 세션 필터 설정 (STATELESS)
-        http
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+        // 커스텀 로그인 필터 추가
+        http.addFilterBefore(
+                new LoginFilter(authenticationManager(authenticationConfiguration), loginSuccessHandler),
+                UsernamePasswordAuthenticationFilter.class
+        );
+
+        // 세션 필터 설정
+        http.sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
         return http.build();
     }
-
 }
