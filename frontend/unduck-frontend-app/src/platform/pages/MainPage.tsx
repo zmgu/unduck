@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchWithAuth } from "../../utils/apiClient";
-import { logout } from "../../utils/authUtils";
+import { fetchWithAuth } from "../../common/utils/apiClient";
+import { logout } from "../../common/utils/authUtils";
 
 const BACKEND_API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL;
 
@@ -87,7 +87,7 @@ function PlatformMainPage() {
         <h3>서비스 선택</h3>
         <div style={{ display: "flex", gap: "10px", flexDirection: "column", maxWidth: "300px" }}>
           <button 
-            onClick={() => navigate("/game")}
+            onClick={() => navigate("/paletteduck")}
             style={{ padding: "10px", fontSize: "16px" }}
           >
             🎮 게임 서비스

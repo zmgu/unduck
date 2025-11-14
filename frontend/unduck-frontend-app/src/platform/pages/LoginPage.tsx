@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { fetchPublic } from "../../utils/apiClient";
-import { buildSocialLoginUrl, buildLoginUrl, getServiceNameFromPath } from "../../utils/authUtils";
+import { fetchPublic } from "../../common/utils/apiClient";
+import { buildSocialLoginUrl, buildLoginUrl, getServiceNameFromPath } from "../../common/utils/authUtils";
 
 const BACKEND_API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL;
 
-function GameLoginPage() {
+function PlatformLoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 현재 경로에서 서비스명 추출 (예: /game/login → "game")
+  // 현재 경로에서 서비스명 추출
   const serviceName = getServiceNameFromPath(location.pathname);
 
   // 일반 로그인 핸들러
@@ -32,7 +32,8 @@ function GameLoginPage() {
 
       const data = await res.json();
       
-      // ✅ 게임 서비스 메인으로 이동
+      // ✅ 토큰은 HttpOnly 쿠키로 자동 저장됨
+      // ✅ 백엔드에서 받은 redirectUrl로 이동
       navigate(data.redirectUrl, { replace: true });
     } catch (err) {
       setError("아이디 또는 비밀번호가 틀렸습니다.");
@@ -47,7 +48,7 @@ function GameLoginPage() {
 
   return (
     <div>
-      <h1>게임 서비스 로그인</h1>
+      <h1>플랫폼 로그인</h1>
 
       <form onSubmit={handleLogin}>
         <label>아이디</label>
@@ -89,4 +90,4 @@ function GameLoginPage() {
   );
 }
 
-export default GameLoginPage;
+export default PlatformLoginPage;

@@ -1,10 +1,13 @@
+server:
+  port: 8091
+
 spring:
   application:
-    name: unduck-gateway-service
+    name: unduck-paletteduck-service
   profiles:
     active: local
   config:
     import: configserver:http://localhost:8888
   cloud:
     config:
-      fail-fast: false
+      fail-fast: true

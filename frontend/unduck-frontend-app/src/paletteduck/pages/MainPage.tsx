@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchWithAuth } from "../../utils/apiClient";
-import { logout } from "../../utils/authUtils";
+import { fetchWithAuth } from "../../common/utils/apiClient";
+import { logout } from "../../common/utils/authUtils";
 
 const BACKEND_API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL;
 
@@ -34,7 +34,7 @@ function GameMainPage() {
     } catch (err) {
       console.error("사용자 정보 로드 실패:", err);
       // ✅ 비로그인 상태 - 게임 로그인 페이지로 이동
-      navigate("/game/login");
+      navigate("/paletteduck/login");
     } finally {
       setLoading(false);
     }
@@ -42,7 +42,7 @@ function GameMainPage() {
 
   const handleLogout = async () => {
     // ✅ 게임 서비스 로그인 페이지로 리다이렉트
-    await logout("game");
+    await logout("paletteduck");
   };
 
   if (loading) {

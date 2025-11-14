@@ -13,7 +13,7 @@ spring:
       server:
         git:
           uri: https://github.com/zmgu/unduck-config.git
-          search-paths: config
+          search-paths: 'config/{application}'
           default-label: main
           username: ${GIT_USERNAME}
           password: ${GIT_TOKEN}
